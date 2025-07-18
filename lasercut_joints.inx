@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension translationdomain="lasercut_joints" xmlns="http://www.inkscape.org/namespace/inkscape/extension">	
+	<dependency type="executable" location="extensions">lasercut_joints.py</dependency>
+	<id>rumatoest.LasercutJoints</id>
+	<name>Joints</name>
+	<param name="activetab" type="notebook">
+		<page name="config" gui-text="Configuration">
+			<hbox>
+				<spacer size="expand"/>
+				<vbox>
+					<label xml:space="preserve" appearance="header">Tabs &amp; Slots</label>
+					<separator />
+					<param name="jointtype" type="optiongroup" gui-text="Draw: ">
+						<option value="tabs">Tab.</option>
+						<option value="slots">Slot.</option>
+						<option value="both">Both.</option>
+					</param>
+					<param name="numtabs" type="int" min="2" max="999" gui-text="Number of tabs/slots:">3</param>
+					<param name="side" type="int" min="0" max="999" gui-text="Side number: ">1</param>
+					<param name="edgefeatures" type="boolean" gui-text="Tab in corners.">True</param>
+					<param name="flipside" type="boolean" gui-text="Tabs on another side.">True</param>
+				</vbox>
+				<separator />
+				<vbox>
+					<label xml:space="preserve" appearance="header">Laser</label>
+					<separator/>
+					<hbox>
+						<spacer size="expand"/>
+						<param name="kerf" type="float" min="0.00" max="1.00" precision="2" gui-text="Kerf "
+						gui-description="Amount lost by the laser.">0.1</param>
+					</hbox>
+					<label xml:space="preserve" appearance="header">Material</label>
+					<separator/>
+					<hbox>
+						<spacer size="expand"/>
+						<param name="thickness" type="float" min="0.0" max="1000.0" precision="2" gui-text="Thickness:">5.0</param>
+					</hbox>
+					<hbox>
+						<spacer size="expand"/>
+						<param name="gapclearance" type="float" min="0.00" max="1.00" precision="2" gui-text="Clearance:"
+						gui-description="Compensate material unevenness in slots width">0.1</param>
+					</hbox>
+					<separator/>
+					<hbox>
+						<spacer size="expand"/>
+						<param name="units" type="optiongroup" appearance="combo" gui-text="Measurement units:">
+							<item value="mm" translatable="no">mm</item>
+							<item value="cm" translatable="no">cm</item>
+							<item value="in" translatable="no">in</item>
+						</param>
+					</hbox>
+				</vbox>
+				<spacer size="expand"/>
+			</hbox>
+		</page>
+		<page name="help" gui-text="Usage hints">
+			<label appearance="header">Warning: You must convert objects to paths (Path &gt; Object to Path).</label>
+			<separator/>
+			<label>This extension adds tabs or slots for assembly to a path or a line.</label>
+			<separator/>
+			<hbox>
+				<vbox>
+					<label>To make a joint, draw a shape and select the side on which to put the tabs.
+					The width of the cut line will be applied to create slots for a tight fit,
+					i.e., the size of the resulting tab will be the same as the size of the resulting slot 
+					(taking into account the loss due to the laser).
+					In the drawing opposite: in black the centering lines of the cut, 
+					in red the material removed for the tabs, and in blue that for the slots.
+					</label>
+				</vbox>
+				<image>lasercut_joints.svg</image>
+			</hbox>
+		</page>
+	</param>
+	<effect needs-live-preview="true">
+		<object-type>path</object-type>
+		<effects-menu>
+			<submenu name="Laser Cut"/>
+		</effects-menu>
+	</effect>
+	<script>
+		<command reldir="extensions" interpreter="python">lasercut_joints.py</command>
+	</script>
+</inkscape-extension>
