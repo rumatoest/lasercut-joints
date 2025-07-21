@@ -249,13 +249,20 @@ class LaserCutJoints(inkex.Effect):
 
         distance = end - start
 
+        # ref_lengh = get_complex_length(distance) - self.kerf
+        ref_lengh = get_complex_length(distance)
         try:
             if self.edgefeatures:
-                seg_length = get_complex_length(distance) / seg_count
+                seg_length = ref_lengh / seg_count
             else:
-                seg_length = get_complex_length(distance) / (seg_count + 1)
+                seg_length = ref_lengh / (seg_count + 1)
         except:
-            seg_length = get_complex_length(distance)
+            seg_length = ref_lengh
+
+        if self.edgefeatures:
+            # Shift start point repective to kerf
+            _, phi = cmath.polar(distance)
+            start += cmath.rect(self.kerf / 2, phi)
 
         new_lines = []
 
@@ -272,11 +279,21 @@ class LaserCutJoints(inkex.Effect):
         slot_id = self.svg.get_unique_id("slot")
         g = etree.SubElement(self.svg.get_current_layer(), "g", {"id": slot_id})
         for i in range(seg_count):
-            if (self.edgefeatures and (i % 2) == 0) or (
-                not self.edgefeatures and (i % 2)
-            ):
+            ef_even = self.edgefeatures and (i % 2) == 0
+            nef_uneven = not self.edgefeatures and (i % 2)
+
+            seg_length_now = seg_length
+            if self.edgefeatures and (i == 0 or i == seg_count - 1):
+                seg_length_now -= self.kerf / 2
+
+            if ef_even or nef_uneven:
                 new_lines = self.draw_slot_box(
-                    start, distance, seg_length, self.thickness, self.kerf, self.gap
+                    start,
+                    distance,
+                    seg_length_now,
+                    self.thickness,
+                    self.kerf,
+                    self.gap,
                 )
 
                 line_atts = {
@@ -288,8 +305,8 @@ class LaserCutJoints(inkex.Effect):
 
             # Find next point
             _, phi = cmath.polar(distance)
-            r = seg_length
-            start = cmath.rect(r, phi) + start
+            r = seg_length_now
+            start += cmath.rect(r, phi)
 
     def convert_to_path(self, elem):
         # Fonction pour convertir un élément en chemin
