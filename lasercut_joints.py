@@ -59,39 +59,28 @@ class LaserCutJoints(inkex.Effect):
 
     def add_arguments(self, pars):
         # Common
-        pars.add_argument(
-            "--jointtype", type=str, default="Both", help="Tab, Slot, or Both"
-        )
-        pars.add_argument("--numtabs", type=int, default=3, help="Number of tabs/slots")
-        pars.add_argument(
-            "--side", type=int, default=0, help="Side number to place tabs or slots on"
-        )
-        pars.add_argument(
-            "--edgefeatures", type=inkex.Boolean, default=True, help="Tab in corners"
-        )
+        pars.add_argument("--jointtype", type=str, default="Both")
+        pars.add_argument("--numtabs", type=int, default=3)
+        pars.add_argument("--side", type=int, default=0)
+        pars.add_argument("--edgefeatures", type=inkex.Boolean, default=True)
         pars.add_argument(
             "--flipside",
             type=inkex.Boolean,
             default=True,
-            help="Make tabs outside the shape",
         )
         # Materials & Laser
-        pars.add_argument(
-            "--kerf", type=float, default=0.15, help="Kerf (amount lost by the laser)"
-        )
-        pars.add_argument(
-            "--thickness", type=float, default=3.0, help="Material thickness"
-        )
+        pars.add_argument("--kerf", type=float, default=0.15)
+        pars.add_argument("--thickness", type=float, default=3.0)
+        pars.add_argument("--tabs_depth", type=float, default=0.0)
         pars.add_argument(
             "--gapclearance",
             type=float,
             default=0.0,
-            help="Material clearance (to compensate unevenness)",
         )
-        pars.add_argument("--units", type=str, default="mm", help="Unit of measurement")
+        pars.add_argument("--units", type=str, default="mm")
 
         # Hidden
-        pars.add_argument("--activetab", default="", help="Tab menu")
+        pars.add_argument("--activetab", default="")
 
     def draw_parallel(self, start, guide_line, distance):
         _, phi = cmath.polar(guide_line)
@@ -185,6 +174,10 @@ class LaserCutJoints(inkex.Effect):
         if isinstance(path[line], Move):
             new_lines.append(["M", [start.real, start.imag]])
 
+        tab_depth = self.thickness + self.kerf / 2
+        if self.tabs_depth > 0:
+            tab_depth = self.tabs_depth + self.kerf / 2
+
         for i in range(seg_count):
             if draw_valley:
                 if i == 0 or i == seg_count - 1:
@@ -205,7 +198,7 @@ class LaserCutJoints(inkex.Effect):
                 # Vertical
                 if i != 0:
                     start = self.draw_perpendicular(
-                        start, distance, self.thickness + self.kerf / 2, self.flipside
+                        start, distance, tab_depth, self.flipside
                     )
                 new_lines.append(["L", [start.real, start.imag]])
                 # Horizontal
@@ -216,7 +209,7 @@ class LaserCutJoints(inkex.Effect):
                 draw_valley = True
                 # Vertical
                 start = self.draw_perpendicular(
-                    start, distance, self.thickness + self.kerf / 2, not self.flipside
+                    start, distance, tab_depth, not self.flipside
                 )
                 new_lines.append(["L", [start.real, start.imag]])
                 # Horizontal
@@ -225,7 +218,7 @@ class LaserCutJoints(inkex.Effect):
 
         if self.edgefeatures == True:
             start = self.draw_perpendicular(
-                start, distance, self.thickness + self.kerf / 2, self.flipside
+                start, distance, tab_depth, self.flipside
             )
             new_lines.append(["L", [start.real, start.imag]])
 
@@ -323,6 +316,9 @@ class LaserCutJoints(inkex.Effect):
         self.numslots = self.options.numtabs
         self.thickness = self.svg.unittouu(
             str(self.options.thickness) + self.options.units
+        )
+        self.tabs_depth = self.svg.unittouu(
+            str(self.options.tabs_depth) + self.options.units
         )
         self.kerf = self.svg.unittouu(str(self.options.kerf) + self.options.units)
         self.edgefeatures = self.options.edgefeatures
