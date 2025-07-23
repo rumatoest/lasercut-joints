@@ -55,6 +55,44 @@ def get_start_end_points(segments, idx):
     return (start, end, closed_path)
 
 
+def shift_point_along(guide_line, start, distance):
+    """
+    Shift start point along quide_line by distance
+    """
+    _, phi = cmath.polar(guide_line)
+    r = distance
+
+    result = cmath.rect(r, phi) + start
+    return complex(round(result.real, 2), round(result.imag, 2))
+
+
+def shift_point_perpendicularly(guide_line, start, distance, invert=False):
+    """
+    Shift start point perpendicularly to the guide_line by distance.
+    Shift direction could be inverted.
+    """
+    _, phi = cmath.polar(guide_line)
+    r = distance
+
+    if invert:
+        phi += cmath.pi / 2
+    else:
+        phi -= cmath.pi / 2
+
+    result = cmath.rect(r, phi) + start
+    return complex(round(result.real, 2), round(result.imag, 2))
+
+
+def convert_to_path(elem):
+    """
+    Converts a given SVG element to a PathElement.
+    """
+    path = inkex.PathElement()
+    path.path = elem.path.to_arrays()
+    path.style = elem.style
+    return path
+
+
 class LaserCutJoints(inkex.Effect):
 
     def add_arguments(self, pars):
@@ -82,25 +120,6 @@ class LaserCutJoints(inkex.Effect):
         # Hidden
         pars.add_argument("--activetab", default="")
 
-    def draw_parallel(self, start, guide_line, distance):
-        _, phi = cmath.polar(guide_line)
-        r = distance
-
-        result = cmath.rect(r, phi) + start
-        return complex(round(result.real, 2), round(result.imag, 2))
-
-    def draw_perpendicular(self, start, guide_line, distance, invert=False):
-        _, phi = cmath.polar(guide_line)
-        r = distance
-
-        if invert:
-            phi += cmath.pi / 2
-        else:
-            phi -= cmath.pi / 2
-
-        result = cmath.rect(r, phi) + start
-        return complex(round(result.real, 2), round(result.imag, 2))
-
     def draw_slot_box(self, start, guideLine, x_distance, y_distance, kerf, gap):
         r, phi = cmath.polar(guideLine)
 
@@ -109,10 +128,8 @@ class LaserCutJoints(inkex.Effect):
         # Kerf expansion
         start += cmath.rect(kerf / 2, phi)
         if self.flipside:
-            # start += cmath.rect(kerf/2 , polPhi + (cmath.pi / 2))
             start += cmath.rect(slot_width / -2, phi + (cmath.pi / 2))
         else:
-            # start += cmath.rect(kerf/2 , polPhi - (cmath.pi / 2))
             start += cmath.rect(slot_width / -2, phi - (cmath.pi / 2))
 
         lines = []
@@ -162,11 +179,11 @@ class LaserCutJoints(inkex.Effect):
             seg_count = (self.numtabs * 2) + 1
             draw_valley = True
 
-        distance = end - start
+        line_reference = end - start
 
-        seg_length = get_complex_length(distance)
+        seg_length = get_complex_length(line_reference)
         if seg_count > 0:
-            seg_length = (get_complex_length(distance)) / seg_count
+            seg_length = (get_complex_length(line_reference)) / seg_count
 
         new_lines = []
 
@@ -197,28 +214,28 @@ class LaserCutJoints(inkex.Effect):
                 draw_valley = False
                 # Vertical
                 if i != 0:
-                    start = self.draw_perpendicular(
-                        start, distance, tab_depth, self.flipside
+                    start = shift_point_perpendicularly(
+                        line_reference, start, tab_depth, self.flipside
                     )
                 new_lines.append(["L", [start.real, start.imag]])
                 # Horizontal
-                start = self.draw_parallel(start, distance, length_with_kerf)
+                start = shift_point_along(line_reference, start, length_with_kerf)
                 new_lines.append(["L", [start.real, start.imag]])
             else:
                 # We are drawing a tab here
                 draw_valley = True
                 # Vertical
-                start = self.draw_perpendicular(
-                    start, distance, tab_depth, not self.flipside
+                start = shift_point_perpendicularly(
+                    line_reference, start, tab_depth, not self.flipside
                 )
                 new_lines.append(["L", [start.real, start.imag]])
                 # Horizontal
-                start = self.draw_parallel(start, distance, length_with_kerf)
+                start = shift_point_along(line_reference, start, length_with_kerf)
                 new_lines.append(["L", [start.real, start.imag]])
 
         if self.edgefeatures == True:
-            start = self.draw_perpendicular(
-                start, distance, tab_depth, self.flipside
+            start = shift_point_perpendicularly(
+                line_reference, start, tab_depth, self.flipside
             )
             new_lines.append(["L", [start.real, start.imag]])
 
@@ -242,7 +259,6 @@ class LaserCutJoints(inkex.Effect):
 
         distance = end - start
 
-        # ref_lengh = get_complex_length(distance) - self.kerf
         ref_lengh = get_complex_length(distance)
         try:
             if self.edgefeatures:
@@ -301,14 +317,6 @@ class LaserCutJoints(inkex.Effect):
             r = seg_length_now
             start += cmath.rect(r, phi)
 
-    def convert_to_path(self, elem):
-        # Fonction pour convertir un élément en chemin
-        d = elem.path.to_arrays()
-        path = inkex.PathElement()
-        path.path = d
-        path.style = elem.style
-        return path
-
     def effect(self):
         # Retrieve parameters
         self.side = self.options.side
@@ -341,7 +349,7 @@ class LaserCutJoints(inkex.Effect):
                 inkex.addNS("polyline", "svg"),
                 inkex.addNS("polygon", "svg"),
             ]:
-                path = self.convert_to_path(elem)
+                path = convert_to_path(elem)
                 self.svg.selected.add(path)
                 self.svg.selected.pop(elem)
                 elem.getparent().replace(elem, path)
